@@ -153,7 +153,8 @@ jobs:
           git config user.email "github-actions@github.com"
 
       - name: Bump Version
-        run: npm version patch -m "ci: bump version %s"
+        run: |
+          npm version patch --no-git-tag-version
 
       # -------------------------
       # Docker Build
@@ -196,7 +197,6 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            cd ~/app
             docker-compose pull
             docker-compose up -d --build
 
@@ -208,8 +208,7 @@ jobs:
         run: |
           VERSION=$(node -p "require('./package.json').version")
 
-          curl -X POST -H "Content-type: application/json" \
-          --data "{
-            \"text\": \"🚀 Deployment Successful\\n📦 Version: v$VERSION\\n✔ Deployed to EC2\\n✔ Pipeline Completed\"
-          }" \
-          ${{ secrets.SLACK_WEBHOOK_URL }}
+          curl -X POST \
+            -H "Content-type: application/json" \
+            --data "{\"text\": \"🚀 Deployment Successful\\n📦 Version: v$VERSION\\n✔ Deployed to EC2\}" \
+            ${{ secrets.SLACK_WEBHOOK_URL }i}
