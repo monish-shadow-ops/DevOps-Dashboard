@@ -39,11 +39,14 @@ jobs:
             STATUS="FAILED ❌"
           fi
 
-          curl -X POST -H 'Content-type: application/json' \
+          curl -X POST https://slack.com/api/chat.postMessage \
+          -H "Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}" \
+          -H "Content-type: application/json" \
           --data "{
-            \"text\": \"🧪 *Test Report*\n📦 Commit: ${GITHUB_SHA::7}\n🌿 Branch: ${GITHUB_REF_NAME}\n📊 Status: ${STATUS}\" 
-          }" \
-          ${{ secrets.SLACK_WEBHOOK_URL }}
+            \"channel\": \"${{ secrets.SLACK_CHANNEL_ID }}\",
+            \"text\": \"🧪 *Test Report*\n📦 Commit: ${GITHUB_SHA::7}\n🌿 Branch: ${GITHUB_REF_NAME}\n📊 Status: ${STATUS}\"
+          }"
+
 
   security-scan:
     runs-on: ubuntu-latest
