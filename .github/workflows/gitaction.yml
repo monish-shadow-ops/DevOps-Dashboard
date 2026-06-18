@@ -56,74 +56,74 @@ jobs:
     # -------------------------
     # GET LATEST TAG
     # -------------------------
-    - name: Get Latest Tag
-      run: |
-        git fetch --tags --force
+      - name: Get Latest Tag
+        run: |
+          git fetch --tags --force
 
-        latest_tag=$(git tag --list "v*" --sort=-v:refname | head -n 1)
+          latest_tag=$(git tag --list "v*" --sort=-v:refname | head -n 1)
 
-        if [ -z "$latest_tag" ]; then
-          latest_tag="v1.0.0"
-        fi
+          if [ -z "$latest_tag" ]; then
+            latest_tag="v1.0.0"
+          fi
 
-        echo "Latest tag: $latest_tag"
-        echo "LATEST_TAG=$latest_tag" >> $GITHUB_ENV
+          echo "Latest tag: $latest_tag"
+          echo "LATEST_TAG=$latest_tag" >> $GITHUB_ENV
 
     # -------------------------
     # INCREMENT VERSION (PATCH ONLY)
     # -------------------------
-    - name: Increment Semantic Version
-      run: |
-        IFS='.' read -r major minor patch <<< "${LATEST_TAG#v}"
+      - name: Increment Semantic Version
+        run: |
+          IFS='.' read -r major minor patch <<< "${LATEST_TAG#v}"
 
-        major=${major:-1}
-        minor=${minor:-0}
-        patch=${patch:-0}
+          major=${major:-1}
+          minor=${minor:-0}
+          patch=${patch:-0}
 
-        patch=$((patch + 1))
+          patch=$((patch + 1))
 
-        NEW_VERSION="v$major.$minor.$patch"
+          NEW_VERSION="v$major.$minor.$patch"
 
-        echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
-        echo "Generated version: $NEW_VERSION"
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+          echo "Generated version: $NEW_VERSION"
 
     # -------------------------
     # CREATE GIT TAG
     # -------------------------
-    - name: Create Git Tag
-      run: |
-        git config user.name "github-actions"
-        git config user.email "github-actions@github.com"
+      - name: Create Git Tag
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
 
-        git tag $NEW_VERSION
-        git push origin $NEW_VERSION
+          git tag $NEW_VERSION
+          git push origin $NEW_VERSION
 
     # -------------------------
     # DOCKER LOGIN
     # -------------------------
-    - name: Docker Login
-      run: |
-        echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login \
-          -u "${{ secrets.DOCKERHUB_USER }}" \
-          --password-stdin
+      - name: Docker Login
+        run: |
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login \
+            -u "${{ secrets.DOCKERHUB_USER }}" \
+            --password-stdin
 
     # -------------------------
     # BUILD IMAGE (SEMANTIC TAG)
     # -------------------------
-    - name: Build Docker Image
-      run: |
-        docker build \
-          -t ${{ secrets.DOCKERHUB_USER }}/devops-dashboard:${{ env.NEW_VERSION }} \
-          -t ${{ secrets.DOCKERHUB_USER }}/devops-dashboard:latest \
-          ./backend
+      - name: Build Docker Image
+        run: |
+          docker build \
+            -t ${{ secrets.DOCKERHUB_USER }}/devops-dashboard:${{ env.NEW_VERSION }} \
+            -t ${{ secrets.DOCKERHUB_USER }}/devops-dashboard:latest \
+            ./backend
 
     # -------------------------
     # PUSH IMAGE
     # -------------------------
-    - name: Push Docker Image
-      run: |
-        docker push ${{ secrets.DOCKERHUB_USER }}/devops-dashboard:${{ env.NEW_VERSION }}
-        docker push ${{ secrets.DOCKERHUB_USER }}/devops-dashboard:latest
+      - name: Push Docker Image
+        run: |
+          docker push ${{ secrets.DOCKERHUB_USER }}/devops-dashboard:${{ env.NEW_VERSION }}
+          docker push ${{ secrets.DOCKERHUB_USER }}/devops-dashboard:latest
 
   deploy:
     runs-on: ubuntu-latest
