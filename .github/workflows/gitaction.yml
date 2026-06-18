@@ -54,11 +54,10 @@ jobs:
           fetch-dept: 0
 
       - name: Get Latest Tag
-        id: get_version
         run: |
-          git fetch --tags
+          git fetch --tags --force
 
-          latest_tags=$(git tag --sort=-v:refname | grep "^v" | head -n 1)
+          latest_tags=$(git tag --list "v*" --sort=-v:refname | head -n 1)
 
           if [ -z "$latest_tag" ]; then
             latest_tag="v1.0.0"
@@ -71,6 +70,11 @@ jobs:
         run: |
           IFS='.' read -r major minor patch <<< "${LATEST#v}"
           path=$((patch + 1))
+
+          major=${major:-1}
+          minor=${minor:-0}
+
+          patch=${patch:-0}
 
           NEW_VERSION="v$major.$minor.$patch"
 
