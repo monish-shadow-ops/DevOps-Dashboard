@@ -64,6 +64,23 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: "0"
 
+      - name: Slack Security Scan Report
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            STATUS="NO CRITICAL VULNERABILITIES FOUND ✅"
+          else
+            STATUS="VULNERABILITIES DETECTED ❌"
+          fi
+
+          curl -X POST https://slack.com/api/chat.postMessage \
+          -H "Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}" \
+          -H "Content-type: application/json" \
+          --data "{
+            \"channel\": \"${{ secrets.SLACK_CHANNEL_ID }}\",
+            \"text\": \"🛡️ *Security Scan Report*\n📦 Commit: ${GITHUB_SHA::7}\n📊 Status: ${STATUS}\"
+          }"
+
   build:
     runs-on: ubuntu-latest
     needs: security-scan
@@ -162,4 +179,21 @@ jobs:
             
             docker compose pull
             docker compose down
-            docker compose up -d 
+            docker compose up -d
+
+      - name: Slack Deployment Report
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            STATUS="DEPLOYED SUCCESSFULLY 🚀"
+          else
+            STATUS="DEPLOYMENT FAILED ❌"
+          fi
+
+          curl -X POST https://slack.com/api/chat.postMessage \
+          -H "Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}" \
+          -H "Content-type: application/json" \
+          --data "{
+            \"channel\": \"${{ secrets.SLACK_CHANNEL_ID }}\",
+            \"text\": \"🚀 *Deployment Report*\n📦 Version: ${NEW_VERSION}\n📦 Commit: ${GITHUB_SHA::7}\n🌿 Branch: ${GITHUB_REF_NAME}\n📊 Status: ${STATUS}\"
+          }" 
