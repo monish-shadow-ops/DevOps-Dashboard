@@ -43,13 +43,12 @@ steps:
         -F channels=${{ secrets.SLACK_CHANNEL_ID }} \
         -H "Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}" \
         https://slack.com/api/files.upload
-```
 
 security-scan:
 runs-on: ubuntu-latest
 needs: test
 
-```
+
 steps:
   - name: Checkout Code
     uses: actions/checkout@v4
@@ -68,13 +67,13 @@ steps:
         -F "text=🔍 Security Scan Completed" \
         -H "Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}" \
         https://slack.com/api/chat.postMessage
-```
+
 
 build:
 runs-on: ubuntu-latest
 needs: security-scan
 
-```
+
 steps:
   - name: Checkout Code
     uses: actions/checkout@v4
@@ -92,13 +91,13 @@ steps:
   - name: Push Docker Image
     run: |
       docker push ${{ secrets.DOCKERHUB_USER }}/devops-dashboard:latest
-```
+
 
 deploy:
 runs-on: ubuntu-latest
 needs: build
 
-```
+
 steps:
   - name: Deploy To EC2
     uses: appleboy/ssh-action@v1.0.3
@@ -118,5 +117,4 @@ steps:
         -F "text=🚀 Deployment Completed Successfully" \
         -H "Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}" \
         https://slack.com/api/chat.postMessage
-```
 
