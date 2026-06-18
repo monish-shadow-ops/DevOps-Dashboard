@@ -30,6 +30,19 @@ jobs:
         working-directory: backend
         run: npm test
 
+      - name: Slack Test Report
+        if: always()
+          if [ "${{ job.status }}" = "success" ]; then
+            STATUS="PASSED ✅"
+          else
+            STATUS="FAILED ❌"
+          fi
+
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{
+          \"text\": \"🧪 *Test Report*\n📦 Commit: ${GITHUB_SHA::7}\n🌿 Branch: ${GITHUB_REF_NAME}\n📊 Status: ${STATUS}\" }" \
+          ${{ secrets.SLACK_WEBHOOK_URL }}
+
   security-scan:
     runs-on: ubuntu-latest
     needs: test
