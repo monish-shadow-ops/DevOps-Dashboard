@@ -210,5 +210,5 @@ jobs:
 
           curl -X POST \
             -H "Content-type: application/json" \
-            --data "{\"text\": \"🚀 Deployment Successful\\n📦 Version: v$VERSION\\n✔ Deployed to EC2\}" \
-            ${{ secrets.SLACK_WEBHOOK_URL }i}
+            --data "{\"text\":\"🚀 Deployment Successful - Version v$VERSION - Deployed to EC2\"}" \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
