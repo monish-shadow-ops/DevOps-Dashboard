@@ -59,7 +59,9 @@ jobs:
 
       - name: Build Docker Image
         run: |
-          docker build -t ${{ secrets.DOCKERHUB_USER }}/devops-dashboard:latest .
+          docker build \
+            -t ${{ secrets.DOCKERHUB_USER }}/devops-dashboard:latest \
+            ./backend
 
       - name: Push Docker Image
         run: |
