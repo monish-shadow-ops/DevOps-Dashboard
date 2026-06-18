@@ -50,6 +50,32 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-dept: 0
+
+      - name: Get Latest Tag
+        id: get_version
+        run: |
+          git fetch --tags
+
+          latest_tags=$(git tag --sort=-v:refname | grep "^v" | head -n 1)
+
+          if [ -z "$latest_tag" ]; then
+            latest_tag="v1.0.0"
+          fi
+
+          echo "Latest tag: $latest_tag"
+          echo "LATEST=$latest_tag" >> $GITHUB_ENV
+
+      - name: Increment Version
+        run: |
+          IFS='.' read -r major minor patch <<< "${LATEST#v}"
+          path=$((patch + 1))
+
+          NEW_VERSION="v$major.$minor.$patch"
+
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+          echo "Version generated: $NEW_VERSION"
 
       - name: Docker Login
         run: |
