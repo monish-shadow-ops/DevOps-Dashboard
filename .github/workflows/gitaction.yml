@@ -1,122 +1,83 @@
 name: CI-CD Pipeline
 
 on:
-push:
-branches:
-- main
+  push:
+    branches:
+      - main
 
 jobs:
 
-test:
-runs-on: ubuntu-latest
+  test:
+    runs-on: ubuntu-latest
 
-steps:
-  - name: Checkout Code
-    uses: actions/checkout@v4
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-  - name: Setup Node
-    uses: actions/setup-node@v4
-    with:
-      node-version: 18
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
 
-  - name: Install Backend Dependencies
-    working-directory: backend
-    run: npm install
+      - name: Install Backend Dependencies
+        working-directory: backend
+        run: npm install
 
-  - name: Run Tests
-    working-directory: backend
-    run: |
-      mkdir -p test-results
-      npm test -- --json --outputFile=test-results/test-report.json
+      - name: Run Tests
+        working-directory: backend
+        run: npm test
 
-  - name: Upload Test Report
-    uses: actions/upload-artifact@v4
-    with:
-      name: test-report
-      path: backend/test-results/test-report.json
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: test
 
-  - name: Send Test Report To Slack
-    if: success()
-    run: |
-      curl -F file=@backend/test-results/test-report.json \
-        -F "initial_comment=✅ Unit Tests Passed" \
-        -F channels=${{ secrets.SLACK_CHANNEL_ID }} \
-        -H "Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}" \
-        https://slack.com/api/files.upload
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
+      - name: Run Trivy Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: "0"
 
-security-scan:
-runs-on: ubuntu-latest
-needs: test
+  build:
+    runs-on: ubuntu-latest
+    needs: security-scan
 
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-steps:
-  - name: Checkout Code
-    uses: actions/checkout@v4
+      - name: Docker Login
+        run: |
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login \
+            -u "${{ secrets.DOCKERHUB_USER }}" \
+            --password-stdin
 
-  - name: Run Trivy FS Scan
-    uses: aquasecurity/trivy-action@master
-    with:
-      scan-type: fs
-      scan-ref: .
-      severity: HIGH,CRITICAL
-      exit-code: "0"
+      - name: Build Docker Image
+        run: |
+          docker build -t ${{ secrets.DOCKERHUB_USER }}/devops-dashboard:latest .
 
-  - name: Slack Security Notification
-    run: |
-      curl -X POST https://slack.com/api/chat.postMessage \
-        -H "Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}" \
-        -H "Content-type: application/json" \
-        --data "{\"channel\":\"${{ secrets.SLACK_CHANNEL_ID }}\",\"text\":\"🔍 Security Scan Completed\"}"
+      - name: Push Docker Image
+        run: |
+          docker push ${{ secrets.DOCKERHUB_USER }}/devops-dashboard:latest
 
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
 
-build:
-runs-on: ubuntu-latest
-needs: security-scan
-
-
-steps:
-  - name: Checkout Code
-    uses: actions/checkout@v4
-
-  - name: Docker Login
-    run: |
-      echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login \
-        -u "${{ secrets.DOCKERHUB_USER }}" \
-        --password-stdin
-
-  - name: Build Docker Image
-    run: |
-      docker build -t ${{ secrets.DOCKERHUB_USER }}/devops-dashboard:latest .
-
-  - name: Push Docker Image
-    run: |
-      docker push ${{ secrets.DOCKERHUB_USER }}/devops-dashboard:latest
-
-
-deploy:
-runs-on: ubuntu-latest
-needs: build
-
-
-steps:
-  - name: Deploy To EC2
-    uses: appleboy/ssh-action@v1.0.3
-    with:
-      host: ${{ secrets.EC2_HOST }}
-      username: ubuntu
-      key: ${{ secrets.EC2_SSH_KEY }}
-      script: |
-        cd ~/DevOps-Dashboard
-        git pull
-        docker compose down
-        docker compose up -d --build
-
-  - name: Deployment Notification
-    run: |
-      curl -X POST https://slack.com/api/chat.postMessage \
-        -H "Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}" \
-        -H "Content-type: application/json" \
-        --data "{\"channel\":\"${{ secrets.SLACK_CHANNEL_ID }}\",\"text\":\"🚀 Deployment Completed Successfully\"}"
-
-
+    steps:
+      - name: Deploy To EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd ~/DevOps-Dashboard
+            git pull
+            docker compose down
+            docker compose up -d --build
